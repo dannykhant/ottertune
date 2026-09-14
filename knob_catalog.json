@@ -1,0 +1,312 @@
+{
+  "backend_flush_after": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 0,
+    "maxval": 100000,
+    "default": "0",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "bgwriter_delay": {
+    "vartype": 2,
+    "unit": 2,
+    "minval": 10,
+    "maxval": 10000,
+    "default": "200",
+    "enumvals": null,
+    "context": "sighup",
+    "scope": "global"
+  },
+  "bgwriter_flush_after": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 0,
+    "maxval": 100000,
+    "default": "524288",
+    "enumvals": null,
+    "context": "sighup",
+    "scope": "global"
+  },
+  "bgwriter_lru_maxpages": {
+    "vartype": 2,
+    "unit": 3,
+    "minval": 0,
+    "maxval": 1000,
+    "default": "100",
+    "enumvals": null,
+    "context": "sighup",
+    "scope": "global"
+  },
+  "bgwriter_lru_multiplier": {
+    "vartype": 3,
+    "unit": 3,
+    "minval": 0.0,
+    "maxval": 10.0,
+    "default": "2.0",
+    "enumvals": null,
+    "context": "sighup",
+    "scope": "global"
+  },
+  "checkpoint_completion_target": {
+    "vartype": 3,
+    "unit": 3,
+    "minval": 0.0,
+    "maxval": 1.0,
+    "default": "0.5",
+    "enumvals": null,
+    "context": "sighup",
+    "scope": "global"
+  },
+  "checkpoint_flush_after": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 0,
+    "maxval": 100000,
+    "default": "262144",
+    "enumvals": null,
+    "context": "sighup",
+    "scope": "global"
+  },
+  "checkpoint_timeout": {
+    "vartype": 2,
+    "unit": 2,
+    "minval": 30000,
+    "maxval": 100000,
+    "default": "300000",
+    "enumvals": null,
+    "context": "sighup",
+    "scope": "global"
+  },
+  "commit_delay": {
+    "vartype": 2,
+    "unit": 3,
+    "minval": 0,
+    "maxval": 100000,
+    "default": "0",
+    "enumvals": null,
+    "context": "superuser",
+    "scope": "global"
+  },
+  "commit_siblings": {
+    "vartype": 2,
+    "unit": 3,
+    "minval": 0,
+    "maxval": 1000,
+    "default": "5",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "deadlock_timeout": {
+    "vartype": 2,
+    "unit": 2,
+    "minval": 1,
+    "maxval": 100000,
+    "default": "1000",
+    "enumvals": null,
+    "context": "superuser",
+    "scope": "global"
+  },
+  "default_statistics_target": {
+    "vartype": 2,
+    "unit": 3,
+    "minval": 1,
+    "maxval": 10000,
+    "default": "100",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "effective_cache_size": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 8192,
+    "maxval": 1717986918,
+    "default": "4294967296",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "effective_io_concurrency": {
+    "vartype": 2,
+    "unit": 3,
+    "minval": 0,
+    "maxval": 1000,
+    "default": "1",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "from_collapse_limit": {
+    "vartype": 2,
+    "unit": 3,
+    "minval": 1,
+    "maxval": 100000,
+    "default": "8",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "join_collapse_limit": {
+    "vartype": 2,
+    "unit": 3,
+    "minval": 1,
+    "maxval": 100000,
+    "default": "8",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "maintenance_work_mem": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 1048576,
+    "maxval": 1717986918,
+    "default": "67108864",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "max_parallel_workers_per_gather": {
+    "vartype": 2,
+    "unit": 3,
+    "minval": 0,
+    "maxval": 4,
+    "default": "0",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "max_wal_size": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 33554432,
+    "maxval": 8589934592,
+    "default": "1073741824",
+    "enumvals": null,
+    "context": "sighup",
+    "scope": "global"
+  },
+  "max_worker_processes": {
+    "vartype": 2,
+    "unit": 3,
+    "minval": 0,
+    "maxval": 4,
+    "default": "8",
+    "enumvals": null,
+    "context": "postmaster",
+    "scope": "global"
+  },
+  "min_parallel_relation_size": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 0,
+    "maxval": 100000,
+    "default": "8388608",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "min_wal_size": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 33554432,
+    "maxval": 8589934592,
+    "default": "83886080",
+    "enumvals": null,
+    "context": "sighup",
+    "scope": "global"
+  },
+  "random_page_cost": {
+    "vartype": 3,
+    "unit": 3,
+    "minval": 0.0,
+    "maxval": 100.0,
+    "default": "4.0",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "seq_page_cost": {
+    "vartype": 3,
+    "unit": 3,
+    "minval": 0.0,
+    "maxval": 100.0,
+    "default": "1.0",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "shared_buffers": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 131072,
+    "maxval": 1717986918,
+    "default": "8388608",
+    "enumvals": null,
+    "context": "postmaster",
+    "scope": "global"
+  },
+  "temp_buffers": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 819200,
+    "maxval": 34359738,
+    "default": "8388608",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  },
+  "wal_buffers": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": -1,
+    "maxval": 1717986918,
+    "default": "-1",
+    "enumvals": null,
+    "context": "postmaster",
+    "scope": "global"
+  },
+  "wal_sync_method": {
+    "vartype": 5,
+    "unit": 3,
+    "minval": 0,
+    "maxval": 3,
+    "default": "fdatasync",
+    "enumvals": "fsync,fdatasync,open_sync,open_datasync",
+    "context": "sighup",
+    "scope": "global"
+  },
+  "wal_writer_delay": {
+    "vartype": 2,
+    "unit": 2,
+    "minval": 1,
+    "maxval": 10000,
+    "default": "200",
+    "enumvals": null,
+    "context": "sighup",
+    "scope": "global"
+  },
+  "wal_writer_flush_after": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 0,
+    "maxval": 100000,
+    "default": "1048576",
+    "enumvals": null,
+    "context": "sighup",
+    "scope": "global"
+  },
+  "work_mem": {
+    "vartype": 2,
+    "unit": 1,
+    "minval": 65536,
+    "maxval": 34359738,
+    "default": "4194304",
+    "enumvals": null,
+    "context": "user",
+    "scope": "global"
+  }
+}
