@@ -1,0 +1,88 @@
+version: "3"
+services:
+
+    web:
+        image: ottertune-web
+        container_name: web
+        expose:
+          - "8000"
+        ports:
+          - "8000:8000"
+        links:
+          - backend
+          - rabbitmq
+        depends_on:
+          - backend
+          - rabbitmq
+        environment:
+          DEBUG: 'true'
+          ADMIN_PASSWORD: 'changeme'
+          BACKEND: 'postgresql'
+          DB_NAME: 'ottertune'
+          DB_USER: 'postgres'
+          DB_PASSWORD: 'ottertune'
+          DB_HOST: 'backend'
+          DB_PORT: '5432'
+          DB_OPTS: '{}'
+          MAX_DB_CONN_ATTEMPTS: 30
+          RABBITMQ_HOST: 'rabbitmq'
+        working_dir: /app/website
+        entrypoint: ./start.sh
+        labels:
+          NAME: "ottertune-web"
+        networks:
+          - ottertune-net
+
+    driver:
+        image: ottertune-driver
+        container_name: driver
+        depends_on:
+          - web
+        environment:
+          DEBUG: 'true'
+        working_dir: /app/driver
+        labels:
+          NAME: "ottertune-driver"
+        networks:
+          - ottertune-net
+
+    rabbitmq:
+        image: "rabbitmq:3-management"
+        container_name: rabbitmq
+        restart: always
+        hostname: "rabbitmq"
+        environment:
+           RABBITMQ_DEFAULT_USER: "guest"
+           RABBITMQ_DEFAULT_PASS: "guest"
+           RABBITMQ_DEFAULT_VHOST: "/"
+        expose:
+           - "15672"
+           - "5672"
+        ports:
+           - "15673:15672"
+           - "5673:5672"
+        labels:
+           NAME: "rabbitmq"
+        networks:
+          - ottertune-net
+
+    backend:
+        container_name: backend
+        restart: always
+        image: postgres:9.6
+        environment:
+          POSTGRES_USER: 'postgres'
+          POSTGRES_PASSWORD: 'ottertune'
+          POSTGRES_DB: 'ottertune'
+        expose:
+          - "5432"
+        ports:
+          - "5432:5432"
+        labels:
+          NAME: "ottertune-backend"
+        networks:
+          - ottertune-net
+
+networks:
+   ottertune-net:
+      driver: bridge
