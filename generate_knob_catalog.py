@@ -75,39 +75,78 @@ def generate_catalog(dbms="postgres", memory_gb=2.0, cpu_cores=2, storage_gb=10.
         raw_max = fields.get("maxval")
 
         # VarType: 1=STRING, 2=INTEGER, 3=REAL, 4=BOOL, 5=ENUM
-        # KnobResourceType: 1=MEMORY, 2=CPU, 3=STORAGE, 4=OTHER
         if vartype == 5:  # ENUM
             enumvals = fields.get("enumvals", "").split(",")
             minval = 0
             maxval = len(enumvals) - 1
+            if clean_name == "wal_sync_method":
+                # Limit to POSIX-safe sync methods: 0=fsync, 1=fdatasync
+                maxval = min(1, maxval)
         elif vartype == 4:  # BOOL
             minval = 0
             maxval = 1
         elif vartype in (2, 3):  # INTEGER, REAL
             vtype = int if vartype == 2 else float
-            minval = vtype(raw_min) if raw_min is not None else 0
-            knob_maxval = vtype(raw_max) if raw_max is not None else DEFAULT_MAXVAL
 
-            if resource == 2:  # CPU
-                maxval = cpu_cores * CPU_PERCENT
-            elif resource == 1:  # MEMORY
-                maxval = total_memory * MEMORY_PERCENT
-            elif resource == 3:  # STORAGE
-                maxval = total_storage * STORAGE_PERCENT
+            # --- Dynamic Proportional Hardware Rules ---
+            if clean_name == "shared_buffers":
+                minval = max(128 * (1024 ** 2), int(total_memory * 0.10))
+                maxval = max(minval, int(total_memory * 0.40))
+            elif clean_name == "effective_cache_size":
+                minval = int(total_memory * 0.25)
+                maxval = max(minval, int(total_memory * 0.75))
+            elif clean_name == "wal_buffers":
+                minval = 4 * (1024 ** 2)
+                maxval = min(64 * (1024 ** 2), max(16 * (1024 ** 2), int(total_memory * 0.03)))
+            elif clean_name == "work_mem":
+                minval = 4 * (1024 ** 2)
+                maxval = max(minval, int((total_memory * 0.25) / DEFAULT_SESSION_NUM))
+            elif clean_name == "temp_buffers":
+                minval = 4 * (1024 ** 2)
+                maxval = max(minval, int((total_memory * 0.20) / DEFAULT_SESSION_NUM))
+            elif clean_name == "maintenance_work_mem":
+                minval = min(64 * (1024 ** 2), int(total_memory * 0.05))
+                maxval = max(minval, min(2 * GB, int(total_memory * 0.25)))
+            elif clean_name == "max_wal_size":
+                minval = 1 * GB
+                maxval = max(minval, min(64 * GB, int(total_storage * 0.50)))
+            elif clean_name == "min_wal_size":
+                minval = 80 * (1024 ** 2)
+                maxval = max(minval, min(4 * GB, int(total_storage * 0.20)))
+            elif clean_name == "max_worker_processes":
+                minval = 1
+                maxval = max(1, cpu_cores)
+            elif clean_name == "max_parallel_workers_per_gather":
+                minval = 0
+                maxval = max(1, cpu_cores // 2)
+            elif clean_name == "effective_io_concurrency":
+                minval = 1
+                maxval = min(1024, cpu_cores * 100)
+            elif clean_name == "seq_page_cost":
+                minval = 1.0
+                maxval = 1.2
+            elif clean_name == "random_page_cost":
+                minval = 1.1
+                maxval = 4.0
+            elif clean_name in ("join_collapse_limit", "from_collapse_limit"):
+                minval = 8
+                maxval = 20
+            elif clean_name == "default_statistics_target":
+                minval = 50
+                maxval = 500
+            elif clean_name in ("bgwriter_delay", "wal_writer_delay"):
+                minval = 10
+                maxval = 500
+            elif clean_name == "deadlock_timeout":
+                minval = 100
+                maxval = 2000
+            elif clean_name == "commit_delay":
+                minval = 0
+                maxval = 1000
             else:
-                maxval = min(knob_maxval, 100000.0 if vartype == 2 else 100.0)
+                minval = vtype(raw_min) if raw_min is not None else 0
+                maxval = vtype(raw_max) if raw_max is not None else DEFAULT_MAXVAL
 
-            # Special case for PostgreSQL per-session allocations
-            if dbms in ("postgres", "postgresql") and clean_name in ("work_mem", "temp_buffers"):
-                maxval /= DEFAULT_SESSION_NUM
-
-            if clean_name == "commit_delay":
-                maxval = min(maxval, 1000.0)
-            elif clean_name in ("random_page_cost", "seq_page_cost"):
-                maxval = min(maxval, 10.0)
-
-            maxval = min(maxval, knob_maxval)
-            minval = max(0, minval) if (vartype == 2 and minval > 0) else minval
             if maxval < minval:
                 maxval = minval * 2
 
