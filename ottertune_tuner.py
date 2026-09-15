@@ -500,13 +500,37 @@ def run_tuning_loop(args):
             }
             # Attempt to extract throughput (TPS) from stdout
             for line in proc.stdout.splitlines():
-                if "Throughput:" in line or "Throughput (requests/sec):" in line or "TPS:" in line:
+                line_clean = line.strip()
+                # Check CSV-like TOTAL row: e.g. TOTAL,10000,4249.59,2353.16
+                if line_clean.startswith("TOTAL,") or line_clean.startswith("total,"):
+                    parts = line_clean.split(",")
+                    if len(parts) >= 4:
+                        try:
+                            workload_res['throughput'] = float(parts[3])
+                            break
+                        except ValueError:
+                            pass
+                # Check whitespace-formatted TOTAL row: e.g. TOTAL 5 24.39 204.98 txn/s
+                elif line_clean.startswith("TOTAL") and ("txn/s" in line_clean or len(line_clean.split()) >= 4):
+                    tokens = line_clean.replace("txn/s", "").split()
+                    if len(tokens) >= 4:
+                        try:
+                            workload_res['throughput'] = float(tokens[3])
+                            break
+                        except ValueError:
+                            pass
+                elif any(k in line for k in ["Throughput:", "Throughput (requests/sec):", "TPS:", "transactions/s:"]):
                     parts = line.split(":")
                     if len(parts) >= 2:
                         try:
                             workload_res['throughput'] = float(parts[1].strip().split()[0])
+                            break
                         except ValueError:
                             pass
+            if 'throughput' in workload_res:
+                LOG.info("Measured workload throughput: %.2f TPS", workload_res['throughput'])
+            else:
+                LOG.warning("Could not parse throughput from workload output")
 
         # 5. Collect metrics after workload
         conn = get_db_connection(args)

@@ -101,6 +101,11 @@ def generate_catalog(dbms="postgres", memory_gb=2.0, cpu_cores=2, storage_gb=10.
             if dbms in ("postgres", "postgresql") and clean_name in ("work_mem", "temp_buffers"):
                 maxval /= DEFAULT_SESSION_NUM
 
+            if clean_name == "commit_delay":
+                maxval = min(maxval, 1000.0)
+            elif clean_name in ("random_page_cost", "seq_page_cost"):
+                maxval = min(maxval, 10.0)
+
             maxval = min(maxval, knob_maxval)
             minval = max(0, minval) if (vartype == 2 and minval > 0) else minval
             if maxval < minval:
