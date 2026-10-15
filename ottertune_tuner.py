@@ -489,6 +489,16 @@ def run_tuning_loop(args):
         # 4. Run workload iteration if script provided
         workload_res = {}
         if args.workload_cmd:
+            if args.workload_warmup_cmd:
+                LOG.info("Executing workload warmup: %s", args.workload_warmup_cmd)
+                try:
+                    subprocess.run(args.workload_warmup_cmd, shell=True,
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                   text=True, check=True)
+                except subprocess.CalledProcessError as exc:
+                    LOG.error("Workload warmup failed (exit %d):\n%s",
+                              exc.returncode, exc.stdout or "<no output>")
+                    raise
             LOG.info("Executing workload: %s", args.workload_cmd)
             t0 = time.time()
             proc = subprocess.run(args.workload_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -592,6 +602,7 @@ if __name__ == "__main__":
     parser.add_argument("--db-password", default="postgres")
     parser.add_argument("--workload-name", default="custom")
     parser.add_argument("--workload-cmd", default=None, help="Command to run during each tuning iteration")
+    parser.add_argument("--workload-warmup-cmd", default=None, help="Optional workload command to run before each measured iteration")
     parser.add_argument("--restart-cmd", default=None, help="Command to restart DB container if needed")
     parser.add_argument("--dbms", default="postgres", choices=["postgres", "postgresql", "mysql"])
     parser.add_argument("--memory-gb", type=float, default=2.0, help="Target system RAM in GB (default: 2.0)")

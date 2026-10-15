@@ -23,6 +23,23 @@ CPU_PERCENT = 2.0
 MEMORY_PERCENT = 0.8
 STORAGE_PERCENT = 0.8
 DEFAULT_MAXVAL = 192 * GB
+POSTGRES_OLTP_KNOBS = frozenset({
+    "shared_buffers",
+    "effective_cache_size",
+    "work_mem",
+    "wal_buffers",
+    "min_wal_size",
+    "max_wal_size",
+    "checkpoint_timeout",
+    "checkpoint_completion_target",
+    "bgwriter_lru_maxpages",
+    "bgwriter_lru_multiplier",
+    "wal_writer_delay",
+    "effective_io_concurrency",
+    "random_page_cost",
+    "default_statistics_target",
+    "max_parallel_workers_per_gather",
+})
 
 
 def get_fixtures_dir(repo_dir=None):
@@ -69,6 +86,9 @@ def generate_catalog(dbms="postgres", memory_gb=2.0, cpu_cores=2, storage_gb=10.
         else:
             clean_name = name
 
+        if dbms in ("postgres", "postgresql") and clean_name not in POSTGRES_OLTP_KNOBS:
+            continue
+
         vartype = int(fields["vartype"])
         resource = int(fields.get("resource", 4))
         raw_min = fields.get("minval")
@@ -93,8 +113,8 @@ def generate_catalog(dbms="postgres", memory_gb=2.0, cpu_cores=2, storage_gb=10.
                 minval = max(128 * (1024 ** 2), int(total_memory * 0.10))
                 maxval = max(minval, int(total_memory * 0.40))
             elif clean_name == "effective_cache_size":
-                minval = int(total_memory * 0.25)
-                maxval = max(minval, int(total_memory * 0.75))
+                minval = int(total_memory * 0.50)
+                maxval = max(minval, int(total_memory * 1.50))
             elif clean_name == "wal_buffers":
                 minval = 4 * (1024 ** 2)
                 maxval = min(64 * (1024 ** 2), max(16 * (1024 ** 2), int(total_memory * 0.03)))
