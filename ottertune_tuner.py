@@ -79,6 +79,45 @@ UNITS_MULTIPLIER = {
 }
 
 
+def _resolve_restart_timeout(default=600):
+    """Effective post-restart readiness timeout in seconds.
+
+    Reads ``OTTERTUNE_RESTART_TIMEOUT`` when set to a positive int, else
+    ``default``. Never raises; garbage env falls back to ``default``.
+    """
+    try:
+        raw = os.environ.get("OTTERTUNE_RESTART_TIMEOUT", "")
+        if raw is not None and str(raw).strip() and int(str(raw).strip()) > 0:
+            return int(str(raw).strip())
+    except (TypeError, ValueError, AttributeError):
+        pass
+    return default
+
+
+def _wait_for_db_ready(host, port, dbname, user, password, timeout=None):
+    """Poll until the database accepts connections or ``timeout`` expires.
+
+    Execution robustness only: the optimizer's decision stream is untouched.
+    Uses the same psycopg2 path as the tuner (no external binary needed).
+    Returns True when ready, False on timeout. Never raises.
+    """
+    if timeout is None:
+        timeout = _resolve_restart_timeout()
+    deadline = time.time() + max(0, timeout)
+    while time.time() < deadline:
+        try:
+            conn = psycopg2.connect(
+                host=host, port=port, dbname=dbname,
+                user=user, password=password, connect_timeout=5,
+            )
+            conn.autocommit = True
+            conn.close()
+            return True
+        except Exception:
+            time.sleep(2)
+    return False
+
+
 def get_db_connection(args, dbname=None):
     """Create a database connection with auto-retry."""
     db = dbname or args.db_name
@@ -422,9 +461,26 @@ def apply_knobs(conn, recommendation, native_bounds, knob_catalog, restart_cmd):
 
     if needs_restart and restart_cmd:
         LOG.info("Postmaster context knob changed, restarting database...")
+        try:
+            dsn = conn.get_dsn_parameters()
+        except Exception:
+            dsn = {}
         conn.close()
         subprocess.run(restart_cmd, shell=True, check=True)
-        time.sleep(5)
+        timeout = _resolve_restart_timeout()
+        ready = _wait_for_db_ready(
+            host=dsn.get("host") or "localhost",
+            port=dsn.get("port") or 5432,
+            dbname=dsn.get("dbname") or "postgres",
+            user=dsn.get("user") or "postgres",
+            password=dsn.get("password") or "",
+            timeout=timeout,
+        )
+        if not ready:
+            LOG.warning(
+                "Database not ready within %ds after restart; "
+                "continuing to connection retry.", timeout,
+            )
     else:
         with conn.cursor() as cur:
             cur.execute("SELECT pg_reload_conf()")
@@ -566,6 +622,12 @@ def run_tuning_loop(args):
             best_metric = tps
             best_config = rec
             LOG.info("New best performance achieved: %s", best_metric)
+            # Durability only: same content the end-of-run write produces.
+            try:
+                with open(os.path.join(args.output_dir, "best_configuration.json"), "w") as f:
+                    json.dump(best_config, f, indent=2)
+            except Exception as e:
+                LOG.warning("Could not persist best configuration: %s", e)
 
         # Save artifacts
         with open(os.path.join(iter_dir, "knobs.json"), "w") as f:
