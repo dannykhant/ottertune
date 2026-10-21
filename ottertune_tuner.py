@@ -79,8 +79,8 @@ UNITS_MULTIPLIER = {
 }
 
 
-def _resolve_restart_timeout(default=600):
-    """Effective post-restart readiness timeout in seconds.
+def _restart_retry_budget(default=300):
+    """Total post-restart reconnect budget in seconds.
 
     Reads ``OTTERTUNE_RESTART_TIMEOUT`` when set to a positive int, else
     ``default``. Never raises; garbage env falls back to ``default``.
@@ -94,34 +94,19 @@ def _resolve_restart_timeout(default=600):
     return default
 
 
-def _wait_for_db_ready(host, port, dbname, user, password, timeout=None):
-    """Poll until the database accepts connections or ``timeout`` expires.
-
-    Execution robustness only: the optimizer's decision stream is untouched.
-    Uses the same psycopg2 path as the tuner (no external binary needed).
-    Returns True when ready, False on timeout. Never raises.
-    """
-    if timeout is None:
-        timeout = _resolve_restart_timeout()
-    deadline = time.time() + max(0, timeout)
-    while time.time() < deadline:
-        try:
-            conn = psycopg2.connect(
-                host=host, port=port, dbname=dbname,
-                user=user, password=password, connect_timeout=5,
-            )
-            conn.autocommit = True
-            conn.close()
-            return True
-        except Exception:
-            time.sleep(2)
-    return False
-
-
 def get_db_connection(args, dbname=None):
-    """Create a database connection with auto-retry."""
+    """Create a database connection with bounded auto-retry.
+
+    Retries until ``_restart_retry_budget()`` expires, then raises. The loop
+    is deadline-based so the total stall stays bounded however long a single
+    attempt blocks (up to ``connect_timeout``).
+    """
     db = dbname or args.db_name
-    for _ in range(30):
+    deadline = time.time() + max(0, _restart_retry_budget())
+    attempts = 0
+    last_err = None
+    while time.time() < deadline:
+        attempts += 1
         try:
             conn = psycopg2.connect(
                 host=args.db_host,
@@ -134,8 +119,13 @@ def get_db_connection(args, dbname=None):
             conn.autocommit = True
             return conn
         except Exception as e:
+            last_err = e
+            if attempts == 1 or attempts % 15 == 0:
+                LOG.info("Waiting for database %s on %s:%s (attempt %d): %s",
+                         db, args.db_host, args.db_port, attempts, e)
             time.sleep(2)
-    raise ConnectionError(f"Could not connect to database {db} on {args.db_host}:{args.db_port}")
+    raise ConnectionError(f"Could not connect to database {db} on {args.db_host}:{args.db_port} "
+                          f"after {attempts} attempts: {last_err}")
 
 
 def collect_metrics(conn):
@@ -461,26 +451,8 @@ def apply_knobs(conn, recommendation, native_bounds, knob_catalog, restart_cmd):
 
     if needs_restart and restart_cmd:
         LOG.info("Postmaster context knob changed, restarting database...")
-        try:
-            dsn = conn.get_dsn_parameters()
-        except Exception:
-            dsn = {}
         conn.close()
         subprocess.run(restart_cmd, shell=True, check=True)
-        timeout = _resolve_restart_timeout()
-        ready = _wait_for_db_ready(
-            host=dsn.get("host") or "localhost",
-            port=dsn.get("port") or 5432,
-            dbname=dsn.get("dbname") or "postgres",
-            user=dsn.get("user") or "postgres",
-            password=dsn.get("password") or "",
-            timeout=timeout,
-        )
-        if not ready:
-            LOG.warning(
-                "Database not ready within %ds after restart; "
-                "continuing to connection retry.", timeout,
-            )
     else:
         with conn.cursor() as cur:
             cur.execute("SELECT pg_reload_conf()")
